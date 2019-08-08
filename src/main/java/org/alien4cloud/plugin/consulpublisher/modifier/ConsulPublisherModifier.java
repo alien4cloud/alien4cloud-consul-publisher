@@ -167,7 +167,7 @@ public class ConsulPublisherModifier extends TopologyModifierSupport {
               data.setLogo(PropertyUtil.getScalarValue(polProps.get("logo")));
               data.setDeploymentDate ( (new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")).format(new Date()).toString() );
               data.setType (serviceTypes.get(policy.getType()));
-              data.setUrl("http://" + serviceName + "." + namespace + ".cluster.local.svc");
+              data.setUrl("http://" + serviceName + "." + namespace + ".svc.cluster.local");
 
               try {
                  setNodePropertyPathValue(null,topology,csnode,"data", new ScalarPropertyValue((new ObjectMapper()).writeValueAsString(data)));
