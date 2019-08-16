@@ -1,0 +1,111 @@
+tosca_definitions_version: alien_dsl_2_0_0
+
+metadata:
+  template_name: org.alien4cloud.consulpublisher
+  template_version: 2.2.0-SM8-HF1184
+  template_author: alien4cloud
+
+description: |
+  Types for Consul publishing
+
+imports:
+  - tosca-normative-types:1.0.0-ALIEN20
+  - alien-base-types:2.2.0-SM8-HF1184
+
+node_types:
+
+  org.alien4cloud.consulpublisher.types.ConsulRunner:
+    derived_from: tosca.nodes.Root
+    description: |
+      A type that publishes to consul
+    properties:
+      url:
+        type: string
+        description: |
+          consul url
+        required: true
+      name:
+        type: string
+        description: |
+          service name
+        required: true
+      data:
+        type: string
+        description: |
+          data to be written in consul
+        required: true
+      certificate:
+        type: string
+        description: |
+          client certificate file
+        required: false
+      key:
+        type: string
+        description: |
+          client private key file
+        required: false
+    interfaces:
+      Standard:
+        create:
+          inputs:
+            url: { get_property: [SELF,url] }
+            certificate: { get_property: [SELF,certificate] }
+            key: { get_property: [SELF,key] }
+            name: { get_property: [SELF,name] }
+            data: { get_property: [SELF,data] }
+          implementation: scripts/consul_add.sh
+        delete:
+          inputs:
+            url: { get_property: [SELF,url] }
+            certificate: { get_property: [SELF,certificate] }
+            key: { get_property: [SELF,key] }
+            name: { get_property: [SELF,name] }
+          implementation: scripts/consul_del.sh
+
+policy_types:
+
+  org.alien4cloud.policies.AbstractConsulPublisherPolicy:
+    derived_from: tosca.policies.Root
+    abstract: true
+    metadata:
+      icon: /images/consul.png
+    properties:
+      qualifiedName:
+        type: string
+        required: true
+        description: |
+          service short description
+      description:
+        type: string
+        required: true
+        description: |
+          service long description
+      logo:
+        type: string
+        required: true
+        description: |
+          base64 encoded service icon
+      admin:
+        type: boolean
+        required: true
+        description: |
+          true in case of admin service
+
+  org.alien4cloud.policies.IhmConsulPublisherPolicy:
+    derived_from: org.alien4cloud.policies.AbstractConsulPublisherPolicy
+    metadata:
+      icon: /images/consulI.png
+      a4c_class: fa fa-info-circle
+      a4c_svg_char: f05a
+      # pluginId:pluginBean:phase
+      a4c_policy_impl: alien4cloud-consul-publisher-plugin:consul-publisher-policy-modifier:post-node-match
+
+  org.alien4cloud.policies.ApiConsulPublisherPolicy:
+    derived_from: org.alien4cloud.policies.AbstractConsulPublisherPolicy
+    metadata:
+      icon: /images/consulA.png
+      a4c_class: fa fa-buysellads
+      a4c_svg_char: f20d
+      # pluginId:pluginBean:phase
+      a4c_policy_impl: alien4cloud-consul-publisher-plugin:consul-publisher-policy-modifier:post-node-match
+
