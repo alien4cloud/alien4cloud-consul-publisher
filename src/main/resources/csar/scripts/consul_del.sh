@@ -5,5 +5,5 @@ if [ -z "${certificate}" -o -z "${key}" ]
 then
    curl -X DELETE ${url}/v1/kv/CU/${name}
 else
-   curl -k --cert ${certificate} --key ${key} -X DELETE ${url}/v1/kv/CU/${name}
+   curl -k --cert ${certificate} --key ${key} -X DELETE ${url}/v1/kv/artemis/CU/${name}
 fi
