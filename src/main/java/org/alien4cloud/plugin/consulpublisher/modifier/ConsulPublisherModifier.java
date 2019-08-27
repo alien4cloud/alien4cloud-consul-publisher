@@ -54,7 +54,7 @@ public class ConsulPublisherModifier extends TopologyModifierSupport {
     @Resource
     private MetaPropertiesService metaPropertiesService;
 
-    private static final String CUNAME_PROP = "A4C_META_Cas d'usage";
+    private static final String CUNAME_PROP = "Cas d'usage";
 
     @Resource
     private ConsulPublisherConfiguration configuration;
