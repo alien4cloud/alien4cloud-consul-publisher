@@ -1,11 +1,14 @@
 package org.alien4cloud.plugin.consulpublisher.modifier;
 
-import alien4cloud.model.common.Tag;
+import alien4cloud.common.MetaPropertiesService;
+import alien4cloud.model.common.MetaPropertyTarget;
 import alien4cloud.paas.wf.validation.WorkflowValidator;
 import alien4cloud.tosca.context.ToscaContextual;
+import static alien4cloud.utils.AlienUtils.safe;
 import alien4cloud.utils.PropertyUtil;
 import alien4cloud.utils.YamlParserUtil;
 
+import org.alien4cloud.alm.deployment.configuration.flow.EnvironmentContext;
 import org.alien4cloud.alm.deployment.configuration.flow.FlowExecutionContext;
 import org.alien4cloud.alm.deployment.configuration.flow.TopologyModifierSupport;
 
@@ -16,6 +19,8 @@ import org.alien4cloud.tosca.model.templates.PolicyTemplate;
 import org.alien4cloud.tosca.model.templates.Topology;
 import org.alien4cloud.tosca.normative.constants.NormativeRelationshipConstants;
 import org.alien4cloud.tosca.utils.TopologyNavigationUtil;
+
+import org.apache.commons.lang.StringUtils;
 import org.springframework.stereotype.Component;
 
 import lombok.extern.java.Log;
@@ -37,6 +42,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import javax.annotation.Resource;
@@ -45,7 +51,10 @@ import javax.annotation.Resource;
 @Component("consul-publisher")
 public class ConsulPublisherModifier extends TopologyModifierSupport {
 
-    private static final String CUNAME_TAG = "A4C_META_Cas d'usage";
+    @Resource
+    private MetaPropertiesService metaPropertiesService;
+
+    private static final String CUNAME_PROP = "A4C_META_Cas d'usage";
 
     @Resource
     private ConsulPublisherConfiguration configuration;
@@ -129,19 +138,24 @@ public class ConsulPublisherModifier extends TopologyModifierSupport {
                  }
               }
 
-              /* get "Cas d'usage" from initial topology tags */
-              List<Tag> tags = init_topology.getTags();
+              /* get "Cas d'usage" from initial topology meta property */
               String cuname = null;
-              if (tags != null) {
-                 for (Tag tag : tags) {
-                    if (tag.getName().equals(CUNAME_TAG)) {
-                       cuname = tag.getValue();
-                       break;
+              String cuNameMetaPropertyKey = this.metaPropertiesService.getMetapropertykeyByName(CUNAME_PROP, MetaPropertyTarget.APPLICATION);
+
+              if (cuNameMetaPropertyKey != null) {
+                 Optional<EnvironmentContext> ec = context.getEnvironmentContext();
+                 if (ec.isPresent() && cuNameMetaPropertyKey != null) {
+                    EnvironmentContext env = ec.get();
+                    Map<String, String> metaProperties = safe(env.getApplication().getMetaProperties());
+                    String sCuname = metaProperties.get(cuNameMetaPropertyKey);
+                    if (StringUtils.isNotEmpty(sCuname)) {
+                        cuname = sCuname;
                     }
-                 }
+                }
               }
+              
               if (cuname == null) {
-                 log.log(Level.WARNING, "Can not find " + CUNAME_TAG);
+                 log.log(Level.WARNING, "Can not find " + CUNAME_PROP);
                  cuname = "default";
               }
 
