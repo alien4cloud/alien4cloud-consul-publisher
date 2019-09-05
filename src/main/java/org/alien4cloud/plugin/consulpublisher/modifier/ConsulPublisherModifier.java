@@ -177,7 +177,7 @@ public class ConsulPublisherModifier extends TopologyModifierSupport {
               data.setAdmin(Boolean.valueOf(PropertyUtil.getScalarValue(polProps.get("admin"))));
               data.setQualifiedName("L_ACU_" + PropertyUtil.getScalarValue(polProps.get("qualifiedName")));
               data.setDescription(PropertyUtil.getScalarValue(polProps.get("description")));
-              data.setLogo(" /logo.png");
+              data.setLogo("/logo.png");
               data.setLogo(PropertyUtil.getScalarValue(polProps.get("logo")));
               data.setDeploymentDate ( (new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")).format(new Date()).toString() );
               data.setType (serviceTypes.get(policy.getType()));
