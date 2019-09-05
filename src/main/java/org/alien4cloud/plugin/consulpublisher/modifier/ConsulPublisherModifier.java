@@ -175,8 +175,9 @@ public class ConsulPublisherModifier extends TopologyModifierSupport {
               Map<String,AbstractPropertyValue> polProps = policy.getProperties();
               data.setName(serviceName);
               data.setAdmin(Boolean.valueOf(PropertyUtil.getScalarValue(polProps.get("admin"))));
-              data.setQualifiedName(PropertyUtil.getScalarValue(polProps.get("qualifiedName")));
+              data.setQualifiedName("L_ACU_" + PropertyUtil.getScalarValue(polProps.get("qualifiedName")));
               data.setDescription(PropertyUtil.getScalarValue(polProps.get("description")));
+              data.setLogo(" /logo.png");
               data.setLogo(PropertyUtil.getScalarValue(polProps.get("logo")));
               data.setDeploymentDate ( (new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")).format(new Date()).toString() );
               data.setType (serviceTypes.get(policy.getType()));
