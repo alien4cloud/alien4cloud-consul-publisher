@@ -174,7 +174,6 @@ public class ConsulPublisherModifier extends TopologyModifierSupport {
               /* other info got from policy or generated */
               Map<String,AbstractPropertyValue> polProps = policy.getProperties();
               data.setName(serviceName);
-              data.setUc(cuname);
               data.setAdmin(Boolean.valueOf(PropertyUtil.getScalarValue(polProps.get("admin"))));
               data.setQualifiedName(PropertyUtil.getScalarValue(polProps.get("qualifiedName")));
               data.setDescription(PropertyUtil.getScalarValue(polProps.get("description")));
@@ -218,6 +217,5 @@ public class ConsulPublisherModifier extends TopologyModifierSupport {
         private String deploymentDate; 
         private boolean admin;
         private String url;
-        private String uc;
     }
 }
