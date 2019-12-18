@@ -12,6 +12,7 @@ import org.alien4cloud.alm.deployment.configuration.flow.EnvironmentContext;
 import org.alien4cloud.alm.deployment.configuration.flow.FlowExecutionContext;
 import org.alien4cloud.alm.deployment.configuration.flow.TopologyModifierSupport;
 
+import org.alien4cloud.tosca.model.CSARDependency;
 import org.alien4cloud.tosca.model.definitions.AbstractPropertyValue;
 import org.alien4cloud.tosca.model.definitions.ScalarPropertyValue;
 import org.alien4cloud.tosca.model.templates.NodeTemplate;
@@ -110,7 +111,7 @@ public class ConsulPublisherModifier extends TopologyModifierSupport {
 
               /* add a node (to final topology) which will publish info to consul */
               String nodeName = String.format("%s_%d",policy.getName(), id++);
-              NodeTemplate csnode = addNodeTemplate(null,topology,nodeName, CONSUL_RUNNER, CONSULPUBLISHER_CSAR_VERSION);
+              NodeTemplate csnode = addNodeTemplate(null,topology,nodeName, CONSUL_RUNNER, getCsarVersion(init_topology));
 
               /* set consul url and optionally key/certificate (file names on orchestrator machine) */
               String url = configuration.getUrl();
@@ -204,6 +205,15 @@ public class ConsulPublisherModifier extends TopologyModifierSupport {
               }
            }
         }
+    }
+
+    private String getCsarVersion(Topology topology) {
+        for (CSARDependency dep : topology.getDependencies()) {
+            if (dep.getName().equals("org.alien4cloud.consulpublisher")) {
+                return dep.getVersion();
+            }
+        }
+        return CONSULPUBLISHER_CSAR_VERSION;
     }
 
     @Getter
