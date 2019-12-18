@@ -15,6 +15,7 @@ import org.alien4cloud.alm.deployment.configuration.flow.TopologyModifierSupport
 import org.alien4cloud.tosca.model.CSARDependency;
 import org.alien4cloud.tosca.model.definitions.AbstractPropertyValue;
 import org.alien4cloud.tosca.model.definitions.ScalarPropertyValue;
+import org.alien4cloud.tosca.model.templates.Capability;
 import org.alien4cloud.tosca.model.templates.NodeTemplate;
 import org.alien4cloud.tosca.model.templates.PolicyTemplate;
 import org.alien4cloud.tosca.model.templates.Topology;
@@ -170,6 +171,18 @@ public class ConsulPublisherModifier extends TopologyModifierSupport {
                  namespace = (String)ct0.get("namespace");
               }
 
+              /* get port from capability properties of service */
+              String port = "";
+              Capability endpoint = safe(node.getCapabilities()).get("service_endpoint");
+              if (endpoint != null) {
+                 port = PropertyUtil.getScalarValue(safe(endpoint.getProperties()).get("port"));
+                 if (StringUtils.isNotEmpty(port)) {
+                    port = ":" + port;
+                 } else {
+                    port = "";
+                 }
+              }
+
               setNodePropertyPathValue(null,topology,csnode,"name", new ScalarPropertyValue(cuname + "/" + serviceName));
 
               /* other info got from policy or generated */
@@ -182,7 +195,7 @@ public class ConsulPublisherModifier extends TopologyModifierSupport {
               data.setLogo(PropertyUtil.getScalarValue(polProps.get("logo")));
               data.setDeploymentDate ( (new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")).format(new Date()).toString() );
               data.setType (serviceTypes.get(policy.getType()));
-              data.setUrl("http://" + serviceName + "." + namespace + ".svc.cluster.local");
+              data.setUrl("http://" + serviceName + "." + namespace + ".svc.cluster.local" + port);
 
               try {
                  setNodePropertyPathValue(null,topology,csnode,"data", new ScalarPropertyValue((new ObjectMapper()).writeValueAsString(data)));
