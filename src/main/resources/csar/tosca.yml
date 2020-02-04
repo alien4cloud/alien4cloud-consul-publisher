@@ -14,6 +14,23 @@ imports:
 
 node_types:
 
+  org.alien4cloud.consulpublisher.types.ShellRunner:
+    derived_from: tosca.nodes.Root
+    description: |
+      A type that run a single shell command
+    properties:
+      command:
+        type: string
+        description: |
+          The shell command to run
+        required: true
+    interfaces:
+      Standard:
+        start:
+          inputs:
+            COMMAND: { get_property: [SELF,command] }
+          implementation: scripts/invoke_shell.sh
+
   org.alien4cloud.consulpublisher.types.ConsulRunner:
     derived_from: tosca.nodes.Root
     description: |
