@@ -8,4 +8,7 @@ public class ConsulPublisherPolicyConstants {
 
     // Node added to run consul commands
     public static final String CONSUL_RUNNER = "org.alien4cloud.consulpublisher.types.ConsulRunner";
+
+    // Node added to invoke shell script
+    public static final String SHELL_RUNNER = "org.alien4cloud.consulpublisher.types.ShellRunner";
 }

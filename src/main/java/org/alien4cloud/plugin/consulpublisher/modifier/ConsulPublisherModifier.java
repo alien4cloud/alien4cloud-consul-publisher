@@ -8,10 +8,13 @@ import static alien4cloud.utils.AlienUtils.safe;
 import alien4cloud.utils.PropertyUtil;
 import alien4cloud.utils.YamlParserUtil;
 
+import com.google.common.collect.Lists;
+import lombok.extern.slf4j.Slf4j;
 import org.alien4cloud.alm.deployment.configuration.flow.EnvironmentContext;
 import org.alien4cloud.alm.deployment.configuration.flow.FlowExecutionContext;
 import org.alien4cloud.alm.deployment.configuration.flow.TopologyModifierSupport;
 
+import org.alien4cloud.plugin.consulpublisher.policies.ConsulPublisherPolicyConstants;
 import org.alien4cloud.tosca.model.CSARDependency;
 import org.alien4cloud.tosca.model.definitions.AbstractPropertyValue;
 import org.alien4cloud.tosca.model.definitions.ScalarPropertyValue;
@@ -19,7 +22,10 @@ import org.alien4cloud.tosca.model.templates.Capability;
 import org.alien4cloud.tosca.model.templates.NodeTemplate;
 import org.alien4cloud.tosca.model.templates.PolicyTemplate;
 import org.alien4cloud.tosca.model.templates.Topology;
+import org.alien4cloud.tosca.normative.constants.NormativeComputeConstants;
+import org.alien4cloud.tosca.normative.constants.NormativeNodeTypesConstants;
 import org.alien4cloud.tosca.normative.constants.NormativeRelationshipConstants;
+import org.alien4cloud.tosca.normative.constants.NormativeTypesConstant;
 import org.alien4cloud.tosca.utils.TopologyNavigationUtil;
 
 import org.apache.commons.lang.StringUtils;
@@ -49,17 +55,14 @@ import java.util.Set;
 import java.util.logging.Level;
 import javax.annotation.Resource;
 
-@Log
+@Slf4j
 @Component("consul-publisher")
-public class ConsulPublisherModifier extends TopologyModifierSupport {
+public class ConsulPublisherModifier extends AbstractConsulModifier {
 
     @Resource
     private MetaPropertiesService metaPropertiesService;
 
     private static final String CUNAME_PROP = "Cas d'usage";
-
-    @Resource
-    private ConsulPublisherConfiguration configuration;
 
     private HashMap<String, String> serviceTypes = new HashMap<String,String>() {{
        put (CONSULPUBLISHER_POLICY1, "ihm");
@@ -69,20 +72,21 @@ public class ConsulPublisherModifier extends TopologyModifierSupport {
     @Override
     @ToscaContextual
     public void process(Topology topology, FlowExecutionContext context) {
-        log.info("Processing topology " + topology.getId());
+        log.info("Processing topology {}" ,topology.getId());
 
         try {
             WorkflowValidator.disableValidationThreadLocal.set(true);
             doProcess(topology, context);
         } catch (Exception e) {
             context.getLog().error("Couldn't process consul publisher modifier");
-            log.log(Level.WARNING, "Couldn't process consul publisher modifier", e);
+            log.warn("Couldn't process consul publisher modifier", e);
         } finally {
             WorkflowValidator.disableValidationThreadLocal.remove();
         }
     }
 
     private void doProcess(Topology topology, FlowExecutionContext context) {
+        List<NodeTemplate> publishers = Lists.newArrayList();
 
         /* get initial topology */
         Topology init_topology = (Topology)context.getExecutionCache().get(FlowExecutionContext.INITIAL_TOPOLOGY);
@@ -91,12 +95,12 @@ public class ConsulPublisherModifier extends TopologyModifierSupport {
         Set<PolicyTemplate> policies = TopologyNavigationUtil.getPoliciesOfType(init_topology, CONSULPUBLISHER_POLICY, true);
         for (PolicyTemplate policy : policies) {
            int id = 0;
-           log.info("Processing policy " + policy.getName());
+           log.info("Processing policy {}",policy.getName());
 
            /* get all target nodes on current policy */
            Set<NodeTemplate> targetedMembers = TopologyNavigationUtil.getTargetedMembers(init_topology, policy);
            for (NodeTemplate node : targetedMembers) {
-              log.info("Processing node " + node.getName());
+              log.info("Processing node {}", node.getName());
 
               /* get node in final topology corresponding to node in initial topology */
               NodeTemplate kubeNode = null;
@@ -113,6 +117,9 @@ public class ConsulPublisherModifier extends TopologyModifierSupport {
               /* add a node (to final topology) which will publish info to consul */
               String nodeName = String.format("%s_%d",policy.getName(), id++);
               NodeTemplate csnode = addNodeTemplate(null,topology,nodeName, CONSUL_RUNNER, getCsarVersion(init_topology));
+
+              // Must add an abstract node to invoke Shell
+              publishers.add(csnode);
 
               /* set consul url and optionally key/certificate (file names on orchestrator machine) */
               String url = configuration.getUrl();
@@ -157,7 +164,7 @@ public class ConsulPublisherModifier extends TopologyModifierSupport {
               }
               
               if (cuname == null) {
-                 log.log(Level.WARNING, "Can not find " + CUNAME_PROP);
+                 log.warn( "Can not find {}", CUNAME_PROP);
                  cuname = "default";
               }
 
@@ -200,11 +207,11 @@ public class ConsulPublisherModifier extends TopologyModifierSupport {
               try {
                  setNodePropertyPathValue(null,topology,csnode,"data", new ScalarPropertyValue((new ObjectMapper()).writeValueAsString(data)));
               } catch (Exception e) {
-                 log.log(Level.WARNING, "Couldn't set data", e);
+                 log.warn("Couldn't set data", e);
               }
 
               if (kubeNode == null) {
-                 log.log(Level.WARNING, "Can not find ServiceResource node for " + node.getName());
+                 log.warn("Can not find ServiceResource node for {}" , node.getName());
               } else {
                  /* add relationship on target node so as to be run after the node is deployed */
                  addRelationshipTemplate (
@@ -218,15 +225,25 @@ public class ConsulPublisherModifier extends TopologyModifierSupport {
               }
            }
         }
-    }
 
-    private String getCsarVersion(Topology topology) {
-        for (CSARDependency dep : topology.getDependencies()) {
-            if (dep.getName().equals("org.alien4cloud.consulpublisher")) {
-                return dep.getVersion();
+        String runnerNodeName = (String) context.getExecutionCache().get(RUNNER_NAME);
+
+        if (publishers.size() > 0) {
+            if (runnerNodeName == null)  {
+                log.warn("No Shell Runner in topology - ConsulNotifier may not be declared");
+            } else {
+                NodeTemplate runnerNode = topology.getNodeTemplates().get(runnerNodeName);
+
+                for (NodeTemplate node : publishers) {
+                    addRelationshipTemplate(null,topology, runnerNode,node.getName(),NormativeRelationshipConstants.DEPENDS_ON, "dependency","feature");
+                }
             }
+        } else if (runnerNodeName != null) {
+            // No publishers but nodes was added by the consul notifier modifier
+            // This node needs to be removed
+            NodeTemplate computeNode = TopologyNavigationUtil.getImmediateHostTemplate(topology, topology.getNodeTemplates().get(runnerNodeName));
+            removeNode(topology,computeNode);
         }
-        return CONSULPUBLISHER_CSAR_VERSION;
     }
 
     @Getter

@@ -24,6 +24,12 @@ node_types:
         description: |
           The shell command to run
         required: true
+    requirements:
+      - host:
+          capability: tosca.capabilities.Container
+          node: tosca.nodes.Compute
+          relationship: tosca.relationships.HostedOn
+          occurrences: [0, 1]
     interfaces:
       Standard:
         start:

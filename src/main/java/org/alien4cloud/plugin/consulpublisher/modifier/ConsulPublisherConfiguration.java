@@ -19,4 +19,6 @@ public class ConsulPublisherConfiguration {
     private String certificate;
 
     private String key;
+
+    private String command = "echo Working";
 }

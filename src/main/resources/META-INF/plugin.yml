@@ -2,7 +2,7 @@ id: alien4cloud-consul-publisher-plugin
 name: consul publisher plugin
 version: ${project.version}
 description: >
-  This plugin publishes info on deployned nodes to consul
+  This plugin publishes info on deployed nodes to consul
 configuration_class: org.alien4cloud.plugin.consulpublisher.PluginConfiguration
 dependencies:
   - alien4cloud-kubernetes-plugin
@@ -11,3 +11,9 @@ component_descriptors:
     name: Consul Publisher
     description: >
       Modifier that adds a consul publisher.
+      Insert this modifier to post-matched-node-setup phase.
+  - bean_name: consul-notifier
+    name: Consul Notifier
+    description: >
+      Modifier that adds a consul notifier.
+      Insert this modifier to pre-node-match phase.
