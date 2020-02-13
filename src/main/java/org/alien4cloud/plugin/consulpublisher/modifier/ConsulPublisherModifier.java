@@ -36,10 +36,12 @@ import lombok.Getter;
 import lombok.Setter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 import static alien4cloud.utils.AlienUtils.safe;
 
 import static org.alien4cloud.plugin.kubernetes.modifier.KubernetesAdapterModifier.A4C_KUBERNETES_ADAPTER_MODIFIER_TAG_REPLACEMENT_NODE_FOR;
+import static org.alien4cloud.plugin.kubernetes.modifier.KubernetesAdapterModifier.NAMESPACE_RESOURCE_NAME;
 import static org.alien4cloud.plugin.kubernetes.modifier.KubeTopologyUtils.K8S_TYPES_SERVICE_RESOURCE;
 
 import static org.alien4cloud.plugin.consulpublisher.policies.ConsulPublisherPolicyConstants.*;
@@ -69,6 +71,8 @@ public class ConsulPublisherModifier extends AbstractConsulModifier {
        put (CONSULPUBLISHER_POLICY2, "api");
     }};
 
+    private final ObjectMapper mapper = new ObjectMapper();
+ 
     @Override
     @ToscaContextual
     public void process(Topology topology, FlowExecutionContext context) {
@@ -190,6 +194,20 @@ public class ConsulPublisherModifier extends AbstractConsulModifier {
                  }
               }
 
+              String zone = "";
+              /* get zone from namespace resource */
+              NodeTemplate kubeNS = topology.getNodeTemplates().get((String)context.getExecutionCache().get(NAMESPACE_RESOURCE_NAME));
+              if (kubeNS != null) {
+                 try {
+                    ObjectNode spec = (ObjectNode) mapper.readTree(PropertyUtil.getScalarValue(kubeNS.getProperties().get("resource_spec")));
+                    zone = spec.with("metadata").with("labels").get("ns-zone-de-sensibilite").textValue();
+                 } catch(Exception e) {
+                    log.info("Can't find ns-zone-de-sensibilite");
+                 }
+              } else {
+                 log.info ("No namespace resource");
+              }
+
               setNodePropertyPathValue(null,topology,csnode,"name", new ScalarPropertyValue(cuname + "/" + serviceName));
 
               /* other info got from policy or generated */
@@ -203,9 +221,10 @@ public class ConsulPublisherModifier extends AbstractConsulModifier {
               data.setDeploymentDate ( (new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")).format(new Date()).toString() );
               data.setType (serviceTypes.get(policy.getType()));
               data.setUrl("http://" + serviceName + "." + namespace + ".svc.cluster.local" + port);
+              data.setZone(zone);
 
               try {
-                 setNodePropertyPathValue(null,topology,csnode,"data", new ScalarPropertyValue((new ObjectMapper()).writeValueAsString(data)));
+                 setNodePropertyPathValue(null,topology,csnode,"data", new ScalarPropertyValue(mapper.writeValueAsString(data)));
               } catch (Exception e) {
                  log.warn("Couldn't set data", e);
               }
@@ -258,5 +277,6 @@ public class ConsulPublisherModifier extends AbstractConsulModifier {
         private String deploymentDate; 
         private boolean admin;
         private String url;
+        private String zone;
     }
 }
