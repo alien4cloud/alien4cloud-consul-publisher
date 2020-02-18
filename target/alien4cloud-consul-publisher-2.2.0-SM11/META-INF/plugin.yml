@@ -1,0 +1,13 @@
+id: alien4cloud-consul-publisher-plugin
+name: consul publisher plugin
+version: 2.2.0-SM11
+description: >
+  This plugin publishes info on deployned nodes to consul
+configuration_class: org.alien4cloud.plugin.consulpublisher.PluginConfiguration
+dependencies:
+  - alien4cloud-kubernetes-plugin
+component_descriptors:
+  - bean_name: consul-publisher
+    name: Consul Publisher
+    description: >
+      Modifier that adds a consul publisher.
