@@ -2,7 +2,7 @@ tosca_definitions_version: alien_dsl_2_0_0
 
 metadata:
   template_name: org.alien4cloud.consulpublisher
-  template_version: .+
+  template_version: 3.0.0
   template_author: alien4cloud
 
 description: |
@@ -10,7 +10,7 @@ description: |
 
 imports:
   - tosca-normative-types:1.0.0-ALIEN20
-  - alien-base-types: .+
+  - alien-base-types:3.0.0
 
 node_types:
 

@@ -33,6 +33,8 @@
   </distributionManagement>
 
   <properties>
+
+    <org.alien4cloud.consulpublisher.csar.version>3.0.0</org.alien4cloud.consulpublisher.csar.version>
     <!-- Java coverage configuration -->
     <sonar.java.coveragePlugin>jacoco</sonar.java.coveragePlugin>
     <sonar.dynamicAnalysis>reuseReports</sonar.dynamicAnalysis>
@@ -317,11 +319,7 @@
           <replacements>
             <replacement>
               <token>template_version:.+</token>
-              <value>template_version: ${project.version}</value>
-            </replacement>
-            <replacement>
-              <token>alien-base-types:.+</token>
-              <value>alien-base-types:${project.version}</value>
+              <value>template_version: ${org.alien4cloud.consulpublisher.csar.version}</value>
             </replacement>
           </replacements>
         </configuration>
