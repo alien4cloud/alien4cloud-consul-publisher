@@ -12,8 +12,8 @@
 
   <repositories>
     <repository>
-      <id>repo.opensource.fastconnect.org</id>
-      <url>https://fastconnect.org/maven/content/repositories/opensource</url>
+      <id>pdl-releases</id>
+      <url>https://www.portaildulibre.fr/nexus/repository/opensource-releases</url>
     </repository>
   </repositories>
 
@@ -23,12 +23,12 @@
 
   <distributionManagement>
     <repository>
-      <id>repo.opensource.fastconnect.org</id>
-      <url>https://fastconnect.org/maven/content/repositories/opensource</url>
+      <id>pdl-releases</id>
+      <url>https://www.portaildulibre.fr/nexus/repository/opensource-releases</url>
     </repository>
     <snapshotRepository>
-      <id>repo.opensource.snapshot.fastconnect.org</id>
-      <url>https://fastconnect.org/maven/content/repositories/opensource-snapshot</url>
+      <id>pdl-snapshots</id>
+      <url>https://www.portaildulibre.fr/nexus/repository/opensource-snapshots</url>
     </snapshotRepository>
   </distributionManagement>
 
@@ -78,9 +78,6 @@
     <codahale-metrics.version>3.0.2</codahale-metrics.version>
     <metrics-spring.version>3.0.1</metrics-spring.version>
 
-    <!-- Elastic Search mapper (reference the elastic search version actually). -->
-    <es-mapping.version>1.7.5</es-mapping.version>
-    <elasticsearch.version>1.7.0</elasticsearch.version>
     <!-- Groovy is required for ElasticSearch to run as server in order to process scripts -->
     <groovy.version>2.3.5</groovy.version>
 
