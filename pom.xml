@@ -142,7 +142,7 @@
       <version>${jackson.version}</version>
       <scope>provided</scope>
     </dependency>
-    <!-- tests -->
+    <!-- 
     <dependency>
       <groupId>alien4cloud</groupId>
       <artifactId>alien4cloud-test-common</artifactId>
@@ -175,6 +175,7 @@
       <version>1.4</version>
       <scope>test</scope>
     </dependency>
+-->
   </dependencies>
   <build>
     <resources>

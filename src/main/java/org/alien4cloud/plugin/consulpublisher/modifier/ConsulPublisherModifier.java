@@ -2,8 +2,13 @@ package org.alien4cloud.plugin.consulpublisher.modifier;
 
 import alien4cloud.common.MetaPropertiesService;
 import alien4cloud.model.common.MetaPropertyTarget;
+import alien4cloud.paas.wf.TopologyContext;
+import alien4cloud.paas.wf.WorkflowSimplifyService;
+import alien4cloud.paas.wf.WorkflowsBuilderService;
 import alien4cloud.paas.wf.validation.WorkflowValidator;
 import alien4cloud.tosca.context.ToscaContextual;
+import alien4cloud.tosca.context.ToscaContext;
+import alien4cloud.tosca.parser.ToscaParser;
 import static alien4cloud.utils.AlienUtils.safe;
 import alien4cloud.utils.PropertyUtil;
 import alien4cloud.utils.YamlParserUtil;
@@ -22,6 +27,7 @@ import org.alien4cloud.tosca.model.templates.Capability;
 import org.alien4cloud.tosca.model.templates.NodeTemplate;
 import org.alien4cloud.tosca.model.templates.PolicyTemplate;
 import org.alien4cloud.tosca.model.templates.Topology;
+import org.alien4cloud.tosca.model.types.AbstractToscaType;
 import org.alien4cloud.tosca.normative.constants.NormativeComputeConstants;
 import org.alien4cloud.tosca.normative.constants.NormativeNodeTypesConstants;
 import org.alien4cloud.tosca.normative.constants.NormativeRelationshipConstants;
@@ -56,10 +62,16 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
 import javax.annotation.Resource;
+import javax.inject.Inject;
 
 @Slf4j
 @Component("consul-publisher")
 public class ConsulPublisherModifier extends AbstractConsulModifier {
+
+    @Inject
+    private WorkflowSimplifyService workflowSimplifyService;
+    @Inject
+    private WorkflowsBuilderService workflowBuilderService;
 
     @Resource
     private MetaPropertiesService metaPropertiesService;
@@ -77,20 +89,44 @@ public class ConsulPublisherModifier extends AbstractConsulModifier {
     @ToscaContextual
     public void process(Topology topology, FlowExecutionContext context) {
         log.info("Processing topology {}" ,topology.getId());
-
         try {
             WorkflowValidator.disableValidationThreadLocal.set(true);
-            doProcess(topology, context);
+
+            boolean updated = doProcess(topology, context);
+
+            TopologyContext topologyContext = workflowBuilderService.buildCachedTopologyContext(new TopologyContext() {
+                @Override
+                public String getDSLVersion() {
+                    return ToscaParser.LATEST_DSL;
+                }
+
+                @Override
+                public Topology getTopology() {
+                    return topology;
+                }
+
+                @Override
+                public <T extends AbstractToscaType> T findElement(Class<T> clazz, String elementId) {
+                    return ToscaContext.get(clazz, elementId);
+                }
+            });
+
+            if (updated) {
+                workflowSimplifyService.simplifyWorkflow(topologyContext, topology.getWorkflows().keySet());
+            }
+
         } catch (Exception e) {
-            context.getLog().error("Couldn't process consul publisher modifier");
-            log.warn("Couldn't process consul publisher modifier", e);
+            log.warn ("Couldn't process consul publisher modifier", e);
         } finally {
             WorkflowValidator.disableValidationThreadLocal.remove();
+            log.debug("Finished processing topology " + topology.getId());
         }
     }
 
-    private void doProcess(Topology topology, FlowExecutionContext context) {
+    private boolean doProcess(Topology topology, FlowExecutionContext context) {
         List<NodeTemplate> publishers = Lists.newArrayList();
+
+        boolean updated = false;
 
         /* get initial topology */
         Topology init_topology = (Topology)context.getExecutionCache().get(FlowExecutionContext.INITIAL_TOPOLOGY);
@@ -242,6 +278,7 @@ public class ConsulPublisherModifier extends AbstractConsulModifier {
                         "dependency",
                         "feature");
               }
+              updated = true;
            }
         }
 
@@ -256,13 +293,17 @@ public class ConsulPublisherModifier extends AbstractConsulModifier {
                 for (NodeTemplate node : publishers) {
                     addRelationshipTemplate(null,topology, runnerNode,node.getName(),NormativeRelationshipConstants.DEPENDS_ON, "dependency","feature");
                 }
+                updated = true;
             }
         } else if (runnerNodeName != null) {
             // No publishers but nodes was added by the consul notifier modifier
             // This node needs to be removed
             NodeTemplate computeNode = TopologyNavigationUtil.getImmediateHostTemplate(topology, topology.getNodeTemplates().get(runnerNodeName));
             removeNode(topology,computeNode);
+            updated = true;
         }
+
+        return updated;
     }
 
     @Getter
