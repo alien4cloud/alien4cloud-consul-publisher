@@ -234,10 +234,11 @@ public class ConsulPublisherModifier extends AbstractConsulModifier {
               String name = cuname + "/" + qualifiedName;
               setNodePropertyPathValue(null,topology,csnode,"name", new ScalarPropertyValue(name));
 
-              data.setName(serviceName);
+              String description = PropertyUtil.getScalarValue(polProps.get("description"));
+              data.setName(description);
               data.setAdmin(Boolean.valueOf(PropertyUtil.getScalarValue(polProps.get("admin"))));
               data.setQualifiedName(qualifiedName);
-              data.setDescription(PropertyUtil.getScalarValue(polProps.get("description")));
+              data.setDescription(description);
               data.setLogo("/logo.png");
               data.setLogo(PropertyUtil.getScalarValue(polProps.get("logo")));
               data.setDeploymentDate ( (new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")).format(new Date()).toString() );
