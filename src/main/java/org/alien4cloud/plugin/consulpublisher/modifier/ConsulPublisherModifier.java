@@ -41,6 +41,7 @@ import lombok.extern.java.Log;
 import lombok.Getter;
 import lombok.Setter;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
@@ -195,8 +196,9 @@ public class ConsulPublisherModifier extends AbstractConsulModifier {
                  namespace = (String)ct0.get("namespace");
               }
 
-              /* get port from capability properties of service */
+              /* get port and url_path from capability properties of service */
               String port = "";
+              String url_path = null;
               Capability endpoint = safe(node.getCapabilities()).get("service_endpoint");
               if (endpoint != null) {
                  port = PropertyUtil.getScalarValue(safe(endpoint.getProperties()).get("port"));
@@ -205,6 +207,7 @@ public class ConsulPublisherModifier extends AbstractConsulModifier {
                  } else {
                     port = "";
                  }
+                 url_path = PropertyUtil.getScalarValue(safe(endpoint.getProperties()).get("url_path"));
               }
 
               String zone = "";
@@ -221,24 +224,28 @@ public class ConsulPublisherModifier extends AbstractConsulModifier {
                  log.info ("No namespace resource");
               }
 
-              String name = cuname + "/" + serviceName;
-              if (!zone.equals("")) {
-                 name += "/" + zone;
-              }
-              setNodePropertyPathValue(null,topology,csnode,"name", new ScalarPropertyValue(name));
-
               /* other info got from policy or generated */
               Map<String,AbstractPropertyValue> polProps = policy.getProperties();
+              String qualifiedName = "L_ACU_" + PropertyUtil.getScalarValue(polProps.get("qualifiedName"));
+              if (!zone.equals("")) {
+                qualifiedName += "-" + zone;
+              }
+
+              String name = cuname + "/" + qualifiedName;
+              setNodePropertyPathValue(null,topology,csnode,"name", new ScalarPropertyValue(name));
+
               data.setName(serviceName);
               data.setAdmin(Boolean.valueOf(PropertyUtil.getScalarValue(polProps.get("admin"))));
-              data.setQualifiedName("L_ACU_" + PropertyUtil.getScalarValue(polProps.get("qualifiedName")));
+              data.setQualifiedName(qualifiedName);
               data.setDescription(PropertyUtil.getScalarValue(polProps.get("description")));
               data.setLogo("/logo.png");
               data.setLogo(PropertyUtil.getScalarValue(polProps.get("logo")));
               data.setDeploymentDate ( (new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")).format(new Date()).toString() );
               data.setType (serviceTypes.get(policy.getType()));
               data.setUrl("http://" + serviceName + "." + namespace + ".svc.cluster.local" + port);
+              data.setUpstreamUrl("http://" + serviceName + "." + namespace + ".svc.cluster.local" + port);
               data.setZone(zone);
+              data.setContextPath(url_path);
 
               try {
                  setNodePropertyPathValue(null,topology,csnode,"data", new ScalarPropertyValue(mapper.writeValueAsString(data)));
@@ -289,9 +296,11 @@ public class ConsulPublisherModifier extends AbstractConsulModifier {
 
     @Getter
     @Setter
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     private class ConsulData {
         private String name; 
         private String qualifiedName; 
+        private String contextPath;
         private String description; 
         private String type; 
         private boolean active = false; 
@@ -299,6 +308,7 @@ public class ConsulPublisherModifier extends AbstractConsulModifier {
         private String deploymentDate; 
         private boolean admin;
         private String url;
+        private String upstreamUrl;
         private String zone;
     }
 }
