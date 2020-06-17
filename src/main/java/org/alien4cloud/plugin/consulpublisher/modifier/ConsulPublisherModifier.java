@@ -221,7 +221,11 @@ public class ConsulPublisherModifier extends AbstractConsulModifier {
                  log.info ("No namespace resource");
               }
 
-              setNodePropertyPathValue(null,topology,csnode,"name", new ScalarPropertyValue(cuname + "/" + serviceName));
+              String name = cuname + "/" + serviceName;
+              if (!zone.equals("")) {
+                 name += "/" + zone;
+              }
+              setNodePropertyPathValue(null,topology,csnode,"name", new ScalarPropertyValue(name));
 
               /* other info got from policy or generated */
               Map<String,AbstractPropertyValue> polProps = policy.getProperties();
