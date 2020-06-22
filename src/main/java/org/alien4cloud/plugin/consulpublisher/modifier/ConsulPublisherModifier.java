@@ -1,6 +1,7 @@
 package org.alien4cloud.plugin.consulpublisher.modifier;
 
 import alien4cloud.common.MetaPropertiesService;
+import alien4cloud.model.common.Tag;
 import alien4cloud.model.common.MetaPropertyTarget;
 import alien4cloud.paas.wf.TopologyContext;
 import alien4cloud.paas.wf.WorkflowSimplifyService;
@@ -109,6 +110,17 @@ public class ConsulPublisherModifier extends AbstractConsulModifier {
         /* get initial topology */
         Topology init_topology = (Topology)context.getExecutionCache().get(FlowExecutionContext.INITIAL_TOPOLOGY);
 
+        String appQualifiedName = null;
+        List<Tag> topoTags = init_topology.getTags();
+        for (Tag tag: safe(topoTags)) {
+           if (tag.getName().equals("qualifiedName")) {
+              appQualifiedName = tag.getValue();
+           }
+        }
+        if (appQualifiedName == null) {
+           log.warn ("Cannot find app qualified name");
+        }
+
         /* get all ConsulPublisher policies on initial topology */
         Set<PolicyTemplate> policies = TopologyNavigationUtil.getPoliciesOfType(init_topology, CONSULPUBLISHER_POLICY, true);
         for (PolicyTemplate policy : policies) {
@@ -140,11 +152,11 @@ public class ConsulPublisherModifier extends AbstractConsulModifier {
               publishers.add(csnode);
 
               /* set consul url and optionally key/certificate (file names on orchestrator machine) */
-              String url = configuration.getUrl();
-              if ((url == null) || url.equals("")) {
-                 url = "http://localhost:8500";
+              String consulUrl = configuration.getUrl();
+              if ((consulUrl == null) || consulUrl.equals("")) {
+                 consulUrl = "http://localhost:8500";
               }
-              setNodePropertyPathValue(null,topology,csnode,"url", new ScalarPropertyValue(url));
+              setNodePropertyPathValue(null,topology,csnode,"url", new ScalarPropertyValue(consulUrl));
               if ( (configuration.getCertificate() != null) && (configuration.getKey() != null) ) {
                  setNodePropertyPathValue(null,topology,csnode,"certificate", new ScalarPropertyValue(configuration.getCertificate()));
                  setNodePropertyPathValue(null,topology,csnode,"key", new ScalarPropertyValue(configuration.getKey()));
@@ -153,11 +165,17 @@ public class ConsulPublisherModifier extends AbstractConsulModifier {
               /* data to be published into consul */
               ConsulData data = new ConsulData();
 
-              /* service name from K8S plugin node */
+              data.setAppQualifiedName(appQualifiedName);
+
+              /* service name and url from K8S plugin node */
               String serviceName;
+              String url = null;
+              String upstreamUrl = null;
 
               if (kubeNode != null) {
                   serviceName = PropertyUtil.getScalarValue(kubeNode.getProperties().get("service_name"));
+                  url = PropertyUtil.getScalarValue(kubeNode.getProperties().get("url"));
+                  upstreamUrl = PropertyUtil.getScalarValue(kubeNode.getProperties().get("cluster_url"));
               } else {
                   serviceName = PropertyUtil.getScalarValue(node.getProperties().get("service_name"));
                   if (serviceName == null) {
@@ -210,6 +228,18 @@ public class ConsulPublisherModifier extends AbstractConsulModifier {
                  url_path = PropertyUtil.getScalarValue(safe(endpoint.getProperties()).get("url_path"));
               }
 
+              String qualifiedName = "not_set";
+              List<Tag> tags = node.getTags();
+              for (Tag tag: safe(tags)) {
+                 if (tag.getName().equals("qualifiedName")) {
+                    qualifiedName = tag.getValue();
+                 }
+              }
+              if (qualifiedName == null) {
+                 log.warn ("Cannot find qualified name for " + node.getName());
+              }
+
+
               String zone = "";
               /* get zone from namespace resource */
               NodeTemplate kubeNS = topology.getNodeTemplates().get((String)context.getExecutionCache().get(NAMESPACE_RESOURCE_NAME));
@@ -224,16 +254,11 @@ public class ConsulPublisherModifier extends AbstractConsulModifier {
                  log.info ("No namespace resource");
               }
 
-              /* other info got from policy or generated */
-              Map<String,AbstractPropertyValue> polProps = policy.getProperties();
-              String qualifiedName = "L_ACU_" + PropertyUtil.getScalarValue(polProps.get("qualifiedName"));
-              if (!zone.equals("")) {
-                qualifiedName += "-" + zone;
-              }
-
               String name = cuname + "/" + qualifiedName;
               setNodePropertyPathValue(null,topology,csnode,"name", new ScalarPropertyValue(name));
 
+              /* other info got from policy or generated */
+              Map<String,AbstractPropertyValue> polProps = policy.getProperties();
               String description = PropertyUtil.getScalarValue(polProps.get("description"));
               data.setName(description);
               data.setAdmin(Boolean.valueOf(PropertyUtil.getScalarValue(polProps.get("admin"))));
@@ -243,10 +268,12 @@ public class ConsulPublisherModifier extends AbstractConsulModifier {
               data.setLogo(PropertyUtil.getScalarValue(polProps.get("logo")));
               data.setDeploymentDate ( (new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss")).format(new Date()).toString() );
               data.setType (serviceTypes.get(policy.getType()));
-              data.setUrl("http://" + serviceName + "." + namespace + ".svc.cluster.local" + port);
-              data.setUpstreamUrl("http://" + serviceName + "." + namespace + ".svc.cluster.local" + port);
+              data.setUrl(url);
+              //data.setUpstreamUrl("http://" + serviceName + "." + namespace + ".svc.cluster.local" + port);
+              data.setUpstreamUrl(upstreamUrl);
               data.setZone(zone);
               data.setContextPath(url_path);
+              data.setNamespace (namespace);
 
               try {
                  setNodePropertyPathValue(null,topology,csnode,"data", new ScalarPropertyValue(mapper.writeValueAsString(data)));
@@ -301,15 +328,17 @@ public class ConsulPublisherModifier extends AbstractConsulModifier {
     private class ConsulData {
         private String name; 
         private String qualifiedName; 
+        private String appQualifiedName; 
         private String contextPath;
         private String description; 
         private String type; 
-        private boolean active = false; 
+        private boolean active = true; 
         private String logo; 
         private String deploymentDate; 
         private boolean admin;
         private String url;
         private String upstreamUrl;
         private String zone;
+        private String namespace;
     }
 }

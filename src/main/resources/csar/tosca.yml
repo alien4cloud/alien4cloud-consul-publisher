@@ -93,11 +93,6 @@ policy_types:
     metadata:
       icon: /images/consul.png
     properties:
-      qualifiedName:
-        type: string
-        required: true
-        description: |
-          service short description
       description:
         type: string
         required: true
