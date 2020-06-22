@@ -27,6 +27,7 @@ import org.alien4cloud.tosca.model.definitions.ScalarPropertyValue;
 import org.alien4cloud.tosca.model.templates.Capability;
 import org.alien4cloud.tosca.model.templates.NodeTemplate;
 import org.alien4cloud.tosca.model.templates.PolicyTemplate;
+import org.alien4cloud.tosca.model.templates.RelationshipTemplate;
 import org.alien4cloud.tosca.model.templates.Topology;
 import org.alien4cloud.tosca.model.types.AbstractToscaType;
 import org.alien4cloud.tosca.normative.constants.NormativeComputeConstants;
@@ -228,14 +229,17 @@ public class ConsulPublisherModifier extends AbstractConsulModifier {
                  url_path = PropertyUtil.getScalarValue(safe(endpoint.getProperties()).get("url_path"));
               }
 
+              RelationshipTemplate relation = TopologyNavigationUtil.getRelationshipFromType(node, NormativeRelationshipConstants.CONNECTS_TO);
+              NodeTemplate module = init_topology.getNodeTemplates().get(relation.getTarget());
+
               String qualifiedName = "not_set";
-              List<Tag> tags = node.getTags();
+              List<Tag> tags = module.getTags();
               for (Tag tag: safe(tags)) {
                  if (tag.getName().equals("qualifiedName")) {
                     qualifiedName = tag.getValue();
                  }
               }
-              if (qualifiedName == null) {
+              if (qualifiedName.equals("not_set")) {
                  log.warn ("Cannot find qualified name for " + node.getName());
               }
 
