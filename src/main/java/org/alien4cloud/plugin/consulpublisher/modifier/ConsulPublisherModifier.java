@@ -166,7 +166,7 @@ public class ConsulPublisherModifier extends AbstractConsulModifier {
               /* data to be published into consul */
               ConsulData data = new ConsulData();
 
-              data.setAppQualifiedName(appQualifiedName);
+              //data.setAppQualifiedName(appQualifiedName);
 
               /* service name and url from K8S plugin node */
               String serviceName;
@@ -276,8 +276,8 @@ public class ConsulPublisherModifier extends AbstractConsulModifier {
               //data.setUpstreamUrl("http://" + serviceName + "." + namespace + ".svc.cluster.local" + port);
               data.setUpstreamUrl(upstreamUrl);
               data.setZone(zone);
-              data.setContextPath(url_path);
-              data.setNamespace (namespace);
+              //data.setContextPath(url_path);
+              //data.setNamespace (namespace);
 
               try {
                  setNodePropertyPathValue(null,topology,csnode,"data", new ScalarPropertyValue(mapper.writeValueAsString(data)));
